@@ -125,3 +125,4 @@ if [[ "$(uname)" == "Darwin" ]]; then
 fi
 
 export PATH="$HOME/.composer/vendor/bin:$PATH"
+source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
