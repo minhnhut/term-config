@@ -1104,31 +1104,32 @@ require('lazy').setup({
       -- Open NvimTree on startup if no file was specified
       vim.api.nvim_create_autocmd('VimEnter', {
         callback = function()
-          if vim.fn.argc() == 0 and vim.fn.line2byte('$') == -1 then
+          if vim.fn.argc() == 0 and vim.fn.line2byte '$' == -1 then
             require('nvim-tree.api').tree.open()
           end
         end,
       })
 
-      -- Close nvim-tree if it's the last window
-      vim.api.nvim_create_autocmd('QuitPre', {
-        callback = function()
-          local tree_wins = {}
-          local floating_wins = {}
-          local wins = vim.api.nvim_list_wins()
-          for _, w in ipairs(wins) do
-            local bufname = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(w))
-            if bufname:match 'NvimTree_' ~= nil then
-              table.insert(tree_wins, w)
-            end
-            if vim.api.nvim_win_get_config(w).relative ~= '' then
-              table.insert(floating_wins, w)
-            end
+      -- Helper function to check for modified buffers
+      local function is_modified_buffer_open(buffers)
+        for _, v in ipairs(buffers) do
+          if v.name:match 'NvimTree_' == nil then
+            return true
           end
-          if 1 == #wins - #floating_wins - #tree_wins then
-            for _, w in ipairs(tree_wins) do
-              vim.api.nvim_win_close(w, true)
-            end
+        end
+        return false
+      end
+
+      -- Close nvim-tree if it's the last window
+      vim.api.nvim_create_autocmd('BufEnter', {
+        nested = true,
+        callback = function()
+          if
+            #vim.api.nvim_list_wins() == 1
+            and vim.api.nvim_buf_get_name(0):match 'NvimTree_' ~= nil
+            and not is_modified_buffer_open(vim.fn.getbufinfo { bufmodified = 1 })
+          then
+            vim.cmd 'quit'
           end
         end,
       })
@@ -1144,7 +1145,7 @@ require('lazy').setup({
           offsets = {
             {
               filetype = 'NvimTree',
-              text = 'Nvim Tree',
+              text = 'File Explorer',
               separator = true,
               text_align = 'left',
             },
@@ -1163,7 +1164,7 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>bc', '<cmd>BufferLinePickClose<CR>', { desc = 'Pick buffer to close' })
       vim.keymap.set('n', '<leader>bx', function()
         local buf = vim.api.nvim_get_current_buf()
-        vim.cmd('BufferLineCyclePrev')
+        vim.cmd 'BufferLineCyclePrev'
         vim.api.nvim_buf_delete(buf, {})
       end, { desc = 'Close current buffer' })
       vim.keymap.set('n', '<leader>bo', '<cmd>BufferLineCloseOthers<CR>', { desc = 'Close other buffers' })
@@ -1180,6 +1181,61 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>wc', '<cmd>close<CR>', { desc = 'Close window' })
       vim.keymap.set('n', '<leader>wo', '<cmd>only<CR>', { desc = 'Close other windows' })
       vim.keymap.set('n', '<leader>w=', '<C-w>=', { desc = 'Equalize window sizes' })
+    end,
+  },
+  {
+    'OXY2DEV/markview.nvim',
+    lazy = false,
+
+    -- Completion for `blink.cmp`
+    -- dependencies = { "saghen/blink.cmp" },
+  },
+  {
+    '3rd/image.nvim',
+    build = false, -- so that it doesn't build the rock https://github.com/3rd/image.nvim/issues/91#issuecomment-2453430239
+    opts = {
+      processor = 'magick_cli',
+    },
+    config = function()
+      require('image').setup {
+        backend = 'kitty', -- WezTerm supports kitty graphics protocol
+        processor = 'magick_cli', -- or "magick_rock"
+        integrations = {
+          markdown = {
+            enabled = true,
+            clear_in_insert_mode = false,
+            download_remote_images = true,
+            only_render_image_at_cursor = true,
+            only_render_image_at_cursor_mode = 'inline', -- or "inline"
+            floating_windows = false, -- if true, images will be rendered in floating markdown windows
+            filetypes = { 'markdown', 'vimwiki' }, -- markdown extensions (ie. quarto) can go here
+          },
+          neorg = {
+            enabled = true,
+            filetypes = { 'norg' },
+          },
+          typst = {
+            enabled = true,
+            filetypes = { 'typst' },
+          },
+          html = {
+            enabled = false,
+          },
+          css = {
+            enabled = false,
+          },
+        },
+        max_width = nil,
+        max_height = nil,
+        max_width_window_percentage = nil,
+        max_height_window_percentage = 50,
+        scale_factor = 1.0,
+        window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
+        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', 'snacks_notif', 'scrollview', 'scrollview_sign' },
+        editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
+        tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
+        hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.avif' }, -- render image files as images when opened
+      }
     end,
   },
 }, {
