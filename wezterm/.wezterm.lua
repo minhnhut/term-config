@@ -47,9 +47,14 @@ config.colors = {
 }
 
 -- Keybindings (adapted from your tmux.conf)
-config.keys = {
-	-- Send C-a when pressing leader twice
-	{ key = "a", mods = "LEADER|CTRL", action = wezterm.action.SendKey({ key = "a", mods = "CTRL" }) },
+config.keys = { -- Send C-a when pressing leader twice
+	{
+		key = "a",
+		mods = "LEADER|CTRL",
+		action = wezterm.action.SendKey({ key = "a", mods = "CTRL" }),
+	},
+	-- for Claude Code to enter
+	{ key = "Enter", mods = "SHIFT", action = wezterm.action.SendString("\n") },
 
 	-- Pane navigation (C-hjkl without leader, like your tmux)
 	{ key = "h", mods = "CTRL", action = wezterm.action.ActivatePaneDirection("Left") },
