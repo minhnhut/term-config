@@ -90,8 +90,12 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+-- Set Laravel environment before plugins load (overrides auto-discover)
+-- This can be overridden per-project via .env file with vim-dotenv
+vim.env.NVIM_LARAVEL_ENV = vim.env.NVIM_LARAVEL_ENV or 'valet'
+
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.o`
@@ -192,12 +196,7 @@ vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- Keybinds to make split navigation easier.
 --  Use CTRL+<hjkl> to switch between windows
---
---  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+--  NOTE: These are now handled by vim-tmux-navigator plugin for seamless tmux integration
 
 -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
 -- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
@@ -253,8 +252,40 @@ require('lazy').setup({
       vim.cmd.colorscheme 'dracula'
     end,
   },
+  -- Seamless navigation between tmux panes and vim splits
+  {
+    'christoomey/vim-tmux-navigator',
+    cmd = {
+      'TmuxNavigateLeft',
+      'TmuxNavigateDown',
+      'TmuxNavigateUp',
+      'TmuxNavigateRight',
+      'TmuxNavigatePrevious',
+    },
+    keys = {
+      { '<C-h>', '<cmd>TmuxNavigateLeft<cr>' },
+      { '<C-j>', '<cmd>TmuxNavigateDown<cr>' },
+      { '<C-k>', '<cmd>TmuxNavigateUp<cr>' },
+      { '<C-l>', '<cmd>TmuxNavigateRight<cr>' },
+    },
+  },
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'NMAC427/guess-indent.nvim', -- Detect tabstop and shiftwidth automatically
+
+  -- Auto-load .env files from current directory
+  {
+    'tpope/vim-dotenv',
+    config = function()
+      -- Auto-source .env when entering a directory that has one
+      vim.api.nvim_create_autocmd({ 'VimEnter', 'DirChanged' }, {
+        callback = function()
+          if vim.fn.filereadable('.env') == 1 then
+            vim.cmd 'Dotenv .env'
+          end
+        end,
+      })
+    end,
+  },
 
   -- NOTE: Plugins can also be added by using a table,
   -- with the first argument being the link and the following
@@ -519,8 +550,8 @@ require('lazy').setup({
       -- Useful status updates for LSP.
       { 'j-hui/fidget.nvim', opts = {} },
 
-      -- Allows extra capabilities provided by blink.cmp
-      'saghen/blink.cmp',
+      -- Allows extra capabilities provided by nvim-cmp
+      'hrsh7th/cmp-nvim-lsp',
     },
     config = function()
       -- Brief aside: **What is LSP?**
@@ -687,9 +718,10 @@ require('lazy').setup({
 
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
-      --  When you add blink.cmp, luasnip, etc. Neovim now has *more* capabilities.
-      --  So, we create new capabilities with blink.cmp, and then broadcast that to the servers.
-      local capabilities = require('blink.cmp').get_lsp_capabilities()
+      --  When you add nvim-cmp, luasnip, etc. Neovim now has *more* capabilities.
+      --  So, we create new capabilities with cmp-nvim-lsp, and then broadcast that to the servers.
+      local capabilities = vim.lsp.protocol.make_client_capabilities()
+      capabilities = vim.tbl_deep_extend('force', capabilities, require('cmp_nvim_lsp').default_capabilities())
 
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
@@ -808,88 +840,136 @@ require('lazy').setup({
   },
 
   { -- Autocompletion
-    'saghen/blink.cmp',
-    event = 'VimEnter',
-    version = '1.*',
+    'hrsh7th/nvim-cmp',
+    event = 'InsertEnter',
     dependencies = {
       -- Snippet Engine
       {
         'L3MON4D3/LuaSnip',
         version = '2.*',
         build = (function()
-          -- Build Step is needed for regex support in snippets.
-          -- This step is not supported in many windows environments.
-          -- Remove the below condition to re-enable on windows.
           if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
             return
           end
           return 'make install_jsregexp'
         end)(),
-        dependencies = {
-          -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
-        },
-        opts = {},
       },
-      'folke/lazydev.nvim',
+      'saadparwaiz1/cmp_luasnip', -- LuaSnip completion source
+      'hrsh7th/cmp-nvim-lsp', -- LSP completion source
+      'hrsh7th/cmp-path', -- Path completion source
+      'hrsh7th/cmp-buffer', -- Buffer completion source
+      'onsails/lspkind.nvim', -- VS Code-like icons
     },
-    --- @module 'blink.cmp'
-    --- @type blink.cmp.Config
-    opts = {
-      keymap = {
-        -- Tab to cycle through completions, Enter to accept
-        ['<Tab>'] = { 'select_next', 'snippet_forward', 'fallback' },
-        ['<S-Tab>'] = { 'select_prev', 'snippet_backward', 'fallback' },
-        ['<CR>'] = { 'accept', 'fallback' },
-        ['<C-space>'] = { 'show', 'show_documentation', 'hide_documentation' },
-        ['<Esc>'] = { 'hide', 'fallback' },
-        ['<C-k>'] = { 'show_signature', 'hide_signature', 'fallback' },
-      },
+    config = function()
+      local cmp = require 'cmp'
+      local luasnip = require 'luasnip'
+      local lspkind = require 'lspkind'
+      luasnip.config.setup {}
 
-      appearance = {
-        -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
-        -- Adjusts spacing to ensure icons are aligned
-        nerd_font_variant = 'mono',
-      },
+      -- Custom highlight groups for completion menu
+      vim.api.nvim_set_hl(0, 'CmpNormal', { bg = '#1a1a2e' })
+      vim.api.nvim_set_hl(0, 'CmpBorder', { fg = '#bd93f9', bg = '#1a1a2e' })
+      vim.api.nvim_set_hl(0, 'CmpCursorLine', { bg = '#44475a' })
+      vim.api.nvim_set_hl(0, 'CmpDocNormal', { bg = '#1a1a2e' })
+      vim.api.nvim_set_hl(0, 'CmpDocBorder', { fg = '#6272a4', bg = '#1a1a2e' })
 
-      completion = {
-        -- By default, you may press `<c-space>` to show the documentation.
-        -- Optionally, set `auto_show = true` to show the documentation after a delay.
-        documentation = { auto_show = false, auto_show_delay_ms = 500 },
-      },
+      cmp.setup {
+        snippet = {
+          expand = function(args)
+            luasnip.lsp_expand(args.body)
+          end,
+        },
+        completion = { completeopt = 'menu,menuone,noinsert' },
 
-      sources = {
-        default = { 'laravel', 'lsp', 'path', 'snippets', 'lazydev' },
-        providers = {
-          lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
-          laravel = {
-            name = 'laravel',
-            module = 'laravel.blink_source',
+        -- Window styling with borders
+        window = {
+          completion = cmp.config.window.bordered {
+            border = 'rounded',
+            winhighlight = 'Normal:CmpNormal,FloatBorder:CmpBorder,CursorLine:CmpCursorLine,Search:None',
+          },
+          documentation = cmp.config.window.bordered {
+            border = 'rounded',
+            winhighlight = 'Normal:CmpDocNormal,FloatBorder:CmpDocBorder',
           },
         },
-      },
 
-      snippets = { preset = 'luasnip' },
+        -- Icons for completion items
+        formatting = {
+          format = lspkind.cmp_format {
+            mode = 'symbol_text', -- show icon + text
+            maxwidth = 50,
+            ellipsis_char = '...',
+            menu = {
+              nvim_lsp = '[LSP]',
+              luasnip = '[Snip]',
+              buffer = '[Buf]',
+              path = '[Path]',
+              laravel = '[Laravel]',
+              lazydev = '[Lua]',
+            },
+          },
+        },
 
-      -- Blink.cmp includes an optional, recommended rust fuzzy matcher,
-      -- which automatically downloads a prebuilt binary when enabled.
-      --
-      -- By default, we use the Lua implementation instead, but you may enable
-      -- the rust implementation via `'prefer_rust_with_warning'`
-      --
-      -- See :h blink-cmp-config-fuzzy for more information
-      fuzzy = { implementation = 'lua' },
+        -- Tab to select and confirm, S-Tab to go back
+        mapping = cmp.mapping.preset.insert {
+          -- Select next/prev item
+          ['<C-n>'] = cmp.mapping.select_next_item(),
+          ['<C-p>'] = cmp.mapping.select_prev_item(),
 
-      -- Shows a signature help window while you type arguments for a function
-      signature = { enabled = true },
-    },
+          -- Scroll docs
+          ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+          ['<C-f>'] = cmp.mapping.scroll_docs(4),
+
+          -- Tab to select next and confirm, S-Tab to select prev
+          ['<Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              local entry = cmp.get_selected_entry()
+              if not entry then
+                cmp.select_next_item { behavior = cmp.SelectBehavior.Select }
+              else
+                cmp.confirm()
+              end
+            elseif luasnip.expand_or_locally_jumpable() then
+              luasnip.expand_or_jump()
+            else
+              fallback()
+            end
+          end, { 'i', 's' }),
+
+          ['<S-Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_prev_item()
+            elseif luasnip.locally_jumpable(-1) then
+              luasnip.jump(-1)
+            else
+              fallback()
+            end
+          end, { 'i', 's' }),
+
+          -- Manually trigger completion
+          ['<C-Space>'] = cmp.mapping.complete {},
+        },
+        sources = {
+          { name = 'lazydev', group_index = 0 },
+          { name = 'laravel' }, -- Laravel completions (from adalessa/laravel.nvim)
+          {
+            name = 'nvim_lsp',
+            -- Filter out useless "Text" completions (random words from comments)
+            entry_filter = function(entry, ctx)
+              return require('cmp.types').lsp.CompletionItemKind[entry:get_kind()] ~= 'Text'
+            end,
+          },
+          { name = 'luasnip' },
+          { name = 'path' },
+          { name = 'buffer' },
+        },
+      }
+
+      -- Disable completion for certain filetypes
+      cmp.setup.filetype({ 'sh', 'dotenv', 'NvimTree', 'NvimTreeFilter' }, {
+        enabled = false,
+      })
+    end,
   },
 
   -- Highlight todo, notes, etc in comments
@@ -989,31 +1069,135 @@ require('lazy').setup({
   -- My other plugins
   -- Laravel
   {
-    -- Add the Laravel.nvim plugin which gives the ability to run Artisan commands
-    -- from Neovim.
     'adalessa/laravel.nvim',
     dependencies = {
-      'nvim-telescope/telescope.nvim',
-      'tpope/vim-dotenv',
       'MunifTanjim/nui.nvim',
-      'nvimtools/none-ls.nvim',
+      'nvim-lua/plenary.nvim',
+      'nvim-neotest/nvim-nio',
+      'tpope/vim-dotenv',
     },
-    cmd = { 'Sail', 'Artisan', 'Composer', 'Npm', 'Yarn', 'Laravel' },
+    ft = { 'php', 'blade' },
+    event = {
+      'BufEnter composer.json',
+      'VeryLazy',
+    },
+    cond = function()
+      return vim.fn.filereadable('artisan') == 1
+    end,
+    cmd = { 'Laravel' },
     keys = {
-      { '<leader>la', ':Artisan<cr>', desc = 'Laravel Artisan' },
-      { '<leader>lc', ':Composer<cr>', desc = 'Composer' },
-      { '<leader>lr', ':LaravelRoute<cr>', desc = 'Laravel Routes' },
-      { '<leader>lm', ':LaravelMake<cr>', desc = 'Laravel Make' },
+      {
+        '<leader>ll',
+        function()
+          Laravel.pickers.laravel()
+        end,
+        desc = 'Laravel: Open Laravel Picker',
+      },
+      {
+        '<c-g>',
+        function()
+          Laravel.commands.run 'view:finder'
+        end,
+        desc = 'Laravel: Open View Finder',
+      },
+      {
+        '<leader>la',
+        function()
+          Laravel.pickers.artisan()
+        end,
+        desc = 'Laravel: Open Artisan Picker',
+      },
+      {
+        '<leader>lt',
+        function()
+          Laravel.commands.run 'actions'
+        end,
+        desc = 'Laravel: Open Actions Picker',
+      },
+      {
+        '<leader>lr',
+        function()
+          Laravel.pickers.routes()
+        end,
+        desc = 'Laravel: Open Routes Picker',
+      },
+      {
+        '<leader>lh',
+        function()
+          Laravel.run 'artisan docs'
+        end,
+        desc = 'Laravel: Open Documentation',
+      },
+      {
+        '<leader>lm',
+        function()
+          Laravel.pickers.make()
+        end,
+        desc = 'Laravel: Open Make Picker',
+      },
+      {
+        '<leader>lc',
+        function()
+          Laravel.pickers.commands()
+        end,
+        desc = 'Laravel: Open Commands Picker',
+      },
+      {
+        '<leader>lo',
+        function()
+          Laravel.pickers.resources()
+        end,
+        desc = 'Laravel: Open Resources Picker',
+      },
+      {
+        '<leader>lp',
+        function()
+          Laravel.commands.run 'command_center'
+        end,
+        desc = 'Laravel: Open Command Center',
+      },
+      {
+        '<leader>le',
+        function()
+          Laravel.commands.run 'env:configure'
+          vim.notify("After selecting, press <leader>lR to reload", vim.log.levels.INFO)
+        end,
+        desc = 'Laravel: Change Environment',
+      },
+      {
+        '<leader>lR',
+        function()
+          vim.cmd 'Lazy reload laravel.nvim'
+          vim.notify('Laravel.nvim reloaded', vim.log.levels.INFO)
+        end,
+        desc = 'Laravel: Reload Plugin',
+      },
+      {
+        'gf',
+        function()
+          local ok, res = pcall(function()
+            if Laravel.app('gf').cursorOnResource() then
+              return "<cmd>lua Laravel.commands.run('gf')<cr>"
+            end
+          end)
+          if not ok or not res then
+            return 'gf'
+          end
+          return res
+        end,
+        expr = true,
+        noremap = true,
+      },
     },
-    sail = {
-      enabled = false, -- Enable/disable Laravel Sail integration (default: true)
-      auto_detect = true, -- Auto-detect Sail usage in project (default: true)
-    },
-    event = { 'VeryLazy' },
-    config = true,
     opts = {
-      lsp_server = 'intelephense',
-      features = { null_ls = { enable = false } },
+      environments = {
+        default = 'valet', -- Use valet by default (options: local, valet, herd, sail, docker-compose)
+      },
+      features = {
+        pickers = {
+          provider = 'telescope', -- "snacks | telescope | fzf-lua | ui-select"
+        },
+      },
     },
   },
   -- File explorer
@@ -1025,7 +1209,15 @@ require('lazy').setup({
       'nvim-tree/nvim-web-devicons', -- Optional, but recommended
     },
     config = function()
-      require('nvim-tree').setup {}
+      require('nvim-tree').setup {
+        on_attach = function(bufnr)
+          local api = require 'nvim-tree.api'
+          -- Load default mappings first
+          api.config.mappings.default_on_attach(bufnr)
+          -- Make space act as leader in nvim-tree (remove default space mapping if it exists)
+          pcall(vim.keymap.del, 'n', '<Space>', { buffer = bufnr })
+        end,
+      }
       vim.keymap.set('n', '<leader>e', '<cmd>NvimTreeToggle<CR>', { desc = 'Toggle Nvim Tree' })
 
       -- Open NvimTree on startup if no file was specified
@@ -1116,57 +1308,6 @@ require('lazy').setup({
 
     -- Completion for `blink.cmp`
     -- dependencies = { "saghen/blink.cmp" },
-  },
-  {
-    'akinsho/toggleterm.nvim',
-    version = '*',
-    config = function()
-      local Terminal = require('toggleterm.terminal').Terminal
-
-      require('toggleterm').setup {
-        direction = 'float',
-        float_opts = {
-          border = 'curved',
-        },
-      }
-
-      -- Lazygit terminal
-      local lazygit = Terminal:new {
-        cmd = 'lazygit',
-        dir = 'git_dir',
-        direction = 'float',
-        float_opts = {
-          border = 'curved',
-        },
-        on_open = function(term)
-          vim.cmd 'startinsert!'
-          vim.api.nvim_buf_set_keymap(term.bufnr, 'n', 'q', '<cmd>close<CR>', { noremap = true, silent = true })
-        end,
-      }
-
-      vim.keymap.set('n', '<leader>gg', function()
-        lazygit:toggle()
-      end, { desc = 'Lazy[G]it' })
-
-      -- Track the next terminal number
-      local term_count = 0
-
-      -- Toggle terminal (horizontal)
-      vim.keymap.set('n', '<leader>tt', '<cmd>ToggleTerm direction=horizontal<CR>', { desc = '[T]oggle [T]erminal' })
-      vim.keymap.set('n', '<leader>tf', '<cmd>ToggleTerm direction=float<CR>', { desc = '[T]erminal [F]loat' })
-
-      -- New terminal
-      vim.keymap.set('n', '<leader>tn', function()
-        term_count = term_count + 1
-        vim.cmd(term_count + 1 .. 'ToggleTerm direction=horizontal')
-      end, { desc = '[T]erminal [N]ew' })
-
-      -- Select terminal
-      vim.keymap.set('n', '<leader>ts', '<cmd>TermSelect<CR>', { desc = '[T]erminal [S]elect' })
-
-      -- Send visual selection to terminal
-      vim.keymap.set('v', '<leader>tp', '<cmd>ToggleTermSendVisualSelection<CR>', { desc = '[T]erminal [P]aste selection' })
-    end,
   },
 }, {
   ui = {

@@ -65,7 +65,7 @@ white   = "#ffffff"
 
 # Keybindings
 [[keyboard.bindings]]
-# Shift+Enter sends newline for Claude Code
+# Shift+Enter sends CSI u sequence for Claude Code (works through tmux)
 key = "Return"
 mods = "Shift"
-chars = "\n"
+chars = "\u001B[13;2u"
