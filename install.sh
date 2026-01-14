@@ -28,6 +28,7 @@ link_config "$SCRIPT_DIR/nvim" "$HOME/.config/nvim" "nvim"
 link_config "$SCRIPT_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf" "tmux"
 link_config "$SCRIPT_DIR/zsh/.zshrc" "$HOME/.zshrc" "zsh"
 link_config "$SCRIPT_DIR/wezterm/.wezterm.lua" "$HOME/.wezterm.lua" "wezterm"
+link_config "$SCRIPT_DIR/alacritty" "$HOME/.config/alacritty" "alacritty"
 
 # Check for Oh My Zsh
 if [ ! -d "$HOME/.oh-my-zsh" ]; then

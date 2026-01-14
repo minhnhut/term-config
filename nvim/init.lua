@@ -182,7 +182,7 @@ vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagn
 --
 -- NOTE: This won't work in all terminal emulators/tmux/etc. Try your own mapping
 -- or just use <C-\><C-n> to exit terminal mode
-vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
 
 -- TIP: Disable arrow keys in normal mode
 -- vim.keymap.set('n', '<left>', '<cmd>echo "Use h to move!!"<CR>')
@@ -288,6 +288,10 @@ require('lazy').setup({
         topdelete = { text = '‾' },
         changedelete = { text = '~' },
       },
+      on_attach = function(bufnr)
+        local gs = require 'gitsigns'
+        vim.keymap.set('n', '<leader>gb', gs.toggle_current_line_blame, { buffer = bufnr, desc = '[G]it [B]lame toggle' })
+      end,
     },
   },
 
@@ -587,7 +591,7 @@ require('lazy').setup({
 
           -- Fuzzy find all the symbols in your current document.
           --  Symbols are things like variables, functions, types, etc.
-          map('gO', require('telescope.builtin').lsp_document_symbols, 'Open Document Symbols')
+          map('go', require('telescope.builtin').lsp_document_symbols, 'Open Document Symbols')
 
           -- Fuzzy find all the symbols in your current workspace.
           --  Similar to document symbols, except searches over your entire project.
@@ -645,9 +649,9 @@ require('lazy').setup({
           --
           -- This may be unwanted, since they displace some of your code
           if client and client_supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
-            map('<leader>th', function()
+            map('<leader>ti', function()
               vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
-            end, '[T]oggle Inlay [H]ints')
+            end, '[T]oggle [I]nlay Hints')
           end
         end,
       })
@@ -862,9 +866,13 @@ require('lazy').setup({
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets', 'lazydev' },
+        default = { 'laravel', 'lsp', 'path', 'snippets', 'lazydev' },
         providers = {
           lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
+          laravel = {
+            name = 'laravel',
+            module = 'laravel.blink_source',
+          },
         },
       },
 
@@ -978,118 +986,37 @@ require('lazy').setup({
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
 
+  -- My other plugins
+  -- Laravel
   {
+    -- Add the Laravel.nvim plugin which gives the ability to run Artisan commands
+    -- from Neovim.
     'adalessa/laravel.nvim',
     dependencies = {
+      'nvim-telescope/telescope.nvim',
+      'tpope/vim-dotenv',
       'MunifTanjim/nui.nvim',
-      'nvim-lua/plenary.nvim',
-      'nvim-neotest/nvim-nio',
+      'nvimtools/none-ls.nvim',
     },
-    cmd = { 'Laravel' },
+    cmd = { 'Sail', 'Artisan', 'Composer', 'Npm', 'Yarn', 'Laravel' },
     keys = {
-      {
-        '<leader>ll',
-        function()
-          Laravel.pickers.laravel()
-        end,
-        desc = 'Laravel: Open Laravel Picker',
-      },
-      {
-        '<c-g>',
-        function()
-          Laravel.commands.run 'view:finder'
-        end,
-        desc = 'Laravel: Open View Finder',
-      },
-      {
-        '<leader>la',
-        function()
-          Laravel.pickers.artisan()
-        end,
-        desc = 'Laravel: Open Artisan Picker',
-      },
-      {
-        '<leader>lt',
-        function()
-          Laravel.commands.run 'actions'
-        end,
-        desc = 'Laravel: Open Actions Picker',
-      },
-      {
-        '<leader>lr',
-        function()
-          Laravel.pickers.routes()
-        end,
-        desc = 'Laravel: Open Routes Picker',
-      },
-      {
-        '<leader>lh',
-        function()
-          Laravel.run 'artisan docs'
-        end,
-        desc = 'Laravel: Open Documentation',
-      },
-      {
-        '<leader>lm',
-        function()
-          Laravel.pickers.make()
-        end,
-        desc = 'Laravel: Open Make Picker',
-      },
-      {
-        '<leader>lc',
-        function()
-          Laravel.pickers.commands()
-        end,
-        desc = 'Laravel: Open Commands Picker',
-      },
-      {
-        '<leader>lo',
-        function()
-          Laravel.pickers.resources()
-        end,
-        desc = 'Laravel: Open Resources Picker',
-      },
-      {
-        '<leader>lp',
-        function()
-          Laravel.commands.run 'command_center'
-        end,
-        desc = 'Laravel: Open Command Center',
-      },
-      {
-        'gf',
-        function()
-          local ok, res = pcall(function()
-            if Laravel.app('gf').cursorOnResource() then
-              return "<cmd>lua Laravel.commands.run('gf')<cr>"
-            end
-          end)
-          if not ok or not res then
-            return 'gf'
-          end
-          return res
-        end,
-        expr = true,
-        noremap = true,
-      },
+      { '<leader>la', ':Artisan<cr>', desc = 'Laravel Artisan' },
+      { '<leader>lc', ':Composer<cr>', desc = 'Composer' },
+      { '<leader>lr', ':LaravelRoute<cr>', desc = 'Laravel Routes' },
+      { '<leader>lm', ':LaravelMake<cr>', desc = 'Laravel Make' },
     },
-    notifications = true,
     sail = {
-      enabled = true,
-      auto_detect = true,
+      enabled = false, -- Enable/disable Laravel Sail integration (default: true)
+      auto_detect = true, -- Auto-detect Sail usage in project (default: true)
     },
     event = { 'VeryLazy' },
+    config = true,
     opts = {
-      features = {
-        pickers = {
-          provider = 'telescope', -- "snacks | telescope | fzf-lua | ui-select"
-        },
-      },
+      lsp_server = 'intelephense',
+      features = { null_ls = { enable = false } },
     },
   },
-
-  -- My other plugins
+  -- File explorer
   {
     'nvim-tree/nvim-tree.lua',
     version = '*', -- Recommended
@@ -1191,51 +1118,54 @@ require('lazy').setup({
     -- dependencies = { "saghen/blink.cmp" },
   },
   {
-    '3rd/image.nvim',
-    build = false, -- so that it doesn't build the rock https://github.com/3rd/image.nvim/issues/91#issuecomment-2453430239
-    opts = {
-      processor = 'magick_cli',
-    },
+    'akinsho/toggleterm.nvim',
+    version = '*',
     config = function()
-      require('image').setup {
-        backend = 'kitty', -- WezTerm supports kitty graphics protocol
-        processor = 'magick_cli', -- or "magick_rock"
-        integrations = {
-          markdown = {
-            enabled = true,
-            clear_in_insert_mode = false,
-            download_remote_images = true,
-            only_render_image_at_cursor = true,
-            only_render_image_at_cursor_mode = 'inline', -- or "inline"
-            floating_windows = false, -- if true, images will be rendered in floating markdown windows
-            filetypes = { 'markdown', 'vimwiki' }, -- markdown extensions (ie. quarto) can go here
-          },
-          neorg = {
-            enabled = true,
-            filetypes = { 'norg' },
-          },
-          typst = {
-            enabled = true,
-            filetypes = { 'typst' },
-          },
-          html = {
-            enabled = false,
-          },
-          css = {
-            enabled = false,
-          },
+      local Terminal = require('toggleterm.terminal').Terminal
+
+      require('toggleterm').setup {
+        direction = 'float',
+        float_opts = {
+          border = 'curved',
         },
-        max_width = nil,
-        max_height = nil,
-        max_width_window_percentage = nil,
-        max_height_window_percentage = 50,
-        scale_factor = 1.0,
-        window_overlap_clear_enabled = false, -- toggles images when windows are overlapped
-        window_overlap_clear_ft_ignore = { 'cmp_menu', 'cmp_docs', 'snacks_notif', 'scrollview', 'scrollview_sign' },
-        editor_only_render_when_focused = false, -- auto show/hide images when the editor gains/looses focus
-        tmux_show_only_in_active_window = false, -- auto show/hide images in the correct Tmux window (needs visual-activity off)
-        hijack_file_patterns = { '*.png', '*.jpg', '*.jpeg', '*.gif', '*.webp', '*.avif' }, -- render image files as images when opened
       }
+
+      -- Lazygit terminal
+      local lazygit = Terminal:new {
+        cmd = 'lazygit',
+        dir = 'git_dir',
+        direction = 'float',
+        float_opts = {
+          border = 'curved',
+        },
+        on_open = function(term)
+          vim.cmd 'startinsert!'
+          vim.api.nvim_buf_set_keymap(term.bufnr, 'n', 'q', '<cmd>close<CR>', { noremap = true, silent = true })
+        end,
+      }
+
+      vim.keymap.set('n', '<leader>gg', function()
+        lazygit:toggle()
+      end, { desc = 'Lazy[G]it' })
+
+      -- Track the next terminal number
+      local term_count = 0
+
+      -- Toggle terminal (horizontal)
+      vim.keymap.set('n', '<leader>tt', '<cmd>ToggleTerm direction=horizontal<CR>', { desc = '[T]oggle [T]erminal' })
+      vim.keymap.set('n', '<leader>tf', '<cmd>ToggleTerm direction=float<CR>', { desc = '[T]erminal [F]loat' })
+
+      -- New terminal
+      vim.keymap.set('n', '<leader>tn', function()
+        term_count = term_count + 1
+        vim.cmd(term_count + 1 .. 'ToggleTerm direction=horizontal')
+      end, { desc = '[T]erminal [N]ew' })
+
+      -- Select terminal
+      vim.keymap.set('n', '<leader>ts', '<cmd>TermSelect<CR>', { desc = '[T]erminal [S]elect' })
+
+      -- Send visual selection to terminal
+      vim.keymap.set('v', '<leader>tp', '<cmd>ToggleTermSendVisualSelection<CR>', { desc = '[T]erminal [P]aste selection' })
     end,
   },
 }, {
