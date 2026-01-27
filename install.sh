@@ -29,6 +29,7 @@ link_config "$SCRIPT_DIR/tmux/.tmux.conf" "$HOME/.tmux.conf" "tmux"
 link_config "$SCRIPT_DIR/zsh/.zshrc" "$HOME/.zshrc" "zsh"
 link_config "$SCRIPT_DIR/wezterm/.wezterm.lua" "$HOME/.wezterm.lua" "wezterm"
 link_config "$SCRIPT_DIR/alacritty" "$HOME/.config/alacritty" "alacritty"
+link_config "$SCRIPT_DIR/kitty" "$HOME/.config/kitty" "kitty"
 
 # Check for Oh My Zsh
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
