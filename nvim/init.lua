@@ -90,10 +90,6 @@ P.S. You can delete this when you're done too. It's your config now! :)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
--- Set Laravel environment before plugins load (overrides auto-discover)
--- This can be overridden per-project via .env file with vim-dotenv
-vim.env.NVIM_LARAVEL_ENV = vim.env.NVIM_LARAVEL_ENV or 'valet'
-
 -- Set to true if you have a Nerd Font installed and selected in the terminal
 vim.g.have_nerd_font = true
 
@@ -311,6 +307,7 @@ require('lazy').setup({
   -- See `:help gitsigns` to understand what the configuration keys do
   { -- Adds git related signs to the gutter, as well as utilities for managing changes
     'lewis6991/gitsigns.nvim',
+    tag = 'release',
     opts = {
       signs = {
         add = { text = '+' },
@@ -483,6 +480,9 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
+      vim.keymap.set('n', '<C-p>', function()
+        builtin.find_files { no_ignore = true, hidden = true }
+      end, { desc = 'Find all files' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
@@ -584,12 +584,11 @@ require('lazy').setup({
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
       --    function will be executed to configure the current buffer
 
-      -- Prevent LSP from attaching to non-file buffers (fixes "unknown scheme" errors)
+      -- Prevent LSP from attaching to non-file buffers
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('lsp-uri-filter', { clear = true }),
         callback = function(args)
           local bufname = vim.api.nvim_buf_get_name(args.buf)
-          -- Detach if not a file:// scheme (empty means file, absolute paths are files)
           if bufname ~= '' and not bufname:match '^/' and not bufname:match '^%w:' then
             vim.schedule(function()
               pcall(vim.lsp.buf_detach_client, args.buf, args.data.client_id)
@@ -919,7 +918,6 @@ require('lazy').setup({
               luasnip = '[Snip]',
               buffer = '[Buf]',
               path = '[Path]',
-              laravel = '[Laravel]',
               lazydev = '[Lua]',
             },
           },
@@ -966,7 +964,6 @@ require('lazy').setup({
         },
         sources = {
           { name = 'lazydev', group_index = 0 },
-          { name = 'laravel' }, -- Laravel completions (from adalessa/laravel.nvim)
           {
             name = 'nvim_lsp',
             -- Filter out useless "Text" completions (random words from comments)
@@ -984,6 +981,8 @@ require('lazy').setup({
       cmp.setup.filetype({ 'sh', 'dotenv', 'NvimTree', 'NvimTreeFilter' }, {
         enabled = false,
       })
+
+
     end,
   },
 
@@ -1109,139 +1108,6 @@ require('lazy').setup({
   -- you can continue same window with `<space>sr` which resumes last telescope search
 
   -- My other plugins
-  -- Laravel
-  {
-    'adalessa/laravel.nvim',
-    dependencies = {
-      'MunifTanjim/nui.nvim',
-      'nvim-lua/plenary.nvim',
-      'nvim-neotest/nvim-nio',
-      'tpope/vim-dotenv',
-    },
-    ft = { 'php', 'blade' },
-    event = {
-      'BufEnter composer.json',
-      'VeryLazy',
-    },
-    cond = function()
-      return vim.fn.filereadable 'artisan' == 1
-    end,
-    cmd = { 'Laravel' },
-    keys = {
-      {
-        '<leader>ll',
-        function()
-          Laravel.pickers.laravel()
-        end,
-        desc = 'Laravel: Open Laravel Picker',
-      },
-      {
-        '<c-g>',
-        function()
-          Laravel.commands.run 'view:finder'
-        end,
-        desc = 'Laravel: Open View Finder',
-      },
-      {
-        '<leader>la',
-        function()
-          Laravel.pickers.artisan()
-        end,
-        desc = 'Laravel: Open Artisan Picker',
-      },
-      {
-        '<leader>lt',
-        function()
-          Laravel.commands.run 'actions'
-        end,
-        desc = 'Laravel: Open Actions Picker',
-      },
-      {
-        '<leader>lr',
-        function()
-          Laravel.pickers.routes()
-        end,
-        desc = 'Laravel: Open Routes Picker',
-      },
-      {
-        '<leader>lh',
-        function()
-          Laravel.run 'artisan docs'
-        end,
-        desc = 'Laravel: Open Documentation',
-      },
-      {
-        '<leader>lm',
-        function()
-          Laravel.pickers.make()
-        end,
-        desc = 'Laravel: Open Make Picker',
-      },
-      {
-        '<leader>lc',
-        function()
-          Laravel.pickers.commands()
-        end,
-        desc = 'Laravel: Open Commands Picker',
-      },
-      {
-        '<leader>lo',
-        function()
-          Laravel.pickers.resources()
-        end,
-        desc = 'Laravel: Open Resources Picker',
-      },
-      {
-        '<leader>lp',
-        function()
-          Laravel.commands.run 'command_center'
-        end,
-        desc = 'Laravel: Open Command Center',
-      },
-      {
-        '<leader>le',
-        function()
-          Laravel.commands.run 'env:configure'
-          vim.notify('After selecting, press <leader>lR to reload', vim.log.levels.INFO)
-        end,
-        desc = 'Laravel: Change Environment',
-      },
-      {
-        '<leader>lR',
-        function()
-          vim.cmd 'Lazy reload laravel.nvim'
-          vim.notify('Laravel.nvim reloaded', vim.log.levels.INFO)
-        end,
-        desc = 'Laravel: Reload Plugin',
-      },
-      {
-        'gf',
-        function()
-          local ok, res = pcall(function()
-            if Laravel.app('gf').cursorOnResource() then
-              return "<cmd>lua Laravel.commands.run('gf')<cr>"
-            end
-          end)
-          if not ok or not res then
-            return 'gf'
-          end
-          return res
-        end,
-        expr = true,
-        noremap = true,
-      },
-    },
-    opts = {
-      environments = {
-        default = 'valet', -- Use valet by default (options: local, valet, herd, sail, docker-compose)
-      },
-      features = {
-        pickers = {
-          provider = 'telescope', -- "snacks | telescope | fzf-lua | ui-select"
-        },
-      },
-    },
-  },
   -- File explorer
   {
     'nvim-tree/nvim-tree.lua',
@@ -1351,6 +1217,32 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>wc', '<cmd>close<CR>', { desc = 'Close window' })
       vim.keymap.set('n', '<leader>wo', '<cmd>only<CR>', { desc = 'Close other windows' })
       vim.keymap.set('n', '<leader>w=', '<C-w>=', { desc = 'Equalize window sizes' })
+    end,
+  },
+  -- Mistral Codestral (AI code completion)
+  {
+    'jrollin/mistral-codestral.nvim',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      'hrsh7th/nvim-cmp',
+    },
+    event = 'InsertEnter',
+    config = function()
+      require('mistral-codestral').setup {
+        api_key = "cmd:head -n1 ~/.mistral_codestral_key | tr -d '\\n'",
+        model = 'codestral-latest',
+        enable_cmp_source = false,
+        virtual_text = {
+          enabled = true,
+          idle_delay = 800,
+          key_bindings = {
+            accept = '<C-y>',
+            accept_word = '<C-Right>',
+            accept_line = '<C-Down>',
+            clear = '<C-c>',
+          },
+        },
+      }
     end,
   },
   {
