@@ -279,7 +279,7 @@ require('lazy').setup({
       -- Auto-source .env when entering a directory that has one
       vim.api.nvim_create_autocmd({ 'VimEnter', 'DirChanged' }, {
         callback = function()
-          if vim.fn.filereadable('.env') == 1 then
+          if vim.fn.filereadable '.env' == 1 then
             vim.cmd 'Dotenv .env'
           end
         end,
@@ -583,6 +583,21 @@ require('lazy').setup({
       --    That is to say, every time a new file is opened that is associated with
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
       --    function will be executed to configure the current buffer
+
+      -- Prevent LSP from attaching to non-file buffers (fixes "unknown scheme" errors)
+      vim.api.nvim_create_autocmd('LspAttach', {
+        group = vim.api.nvim_create_augroup('lsp-uri-filter', { clear = true }),
+        callback = function(args)
+          local bufname = vim.api.nvim_buf_get_name(args.buf)
+          -- Detach if not a file:// scheme (empty means file, absolute paths are files)
+          if bufname ~= '' and not bufname:match '^/' and not bufname:match '^%w:' then
+            vim.schedule(function()
+              pcall(vim.lsp.buf_detach_client, args.buf, args.data.client_id)
+            end)
+          end
+        end,
+      })
+
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
         callback = function(event)
@@ -993,24 +1008,51 @@ require('lazy').setup({
       -- - sr)'  - [S]urround [R]eplace [)] [']
       require('mini.surround').setup()
 
-      -- Simple and easy statusline.
-      --  You could remove this setup call if you don't like it,
-      --  and try some other statusline plugin
-      local statusline = require 'mini.statusline'
-      -- set use_icons to true if you have a Nerd Font
-      statusline.setup { use_icons = vim.g.have_nerd_font }
-
-      -- You can configure sections in the statusline by overriding their
-      -- default behavior. For example, here we set the section for
-      -- cursor location to LINE:COLUMN
-      ---@diagnostic disable-next-line: duplicate-set-field
-      statusline.section_location = function()
-        return '%2l:%-2v'
-      end
-
       -- ... and there is more!
       --  Check out: https://github.com/echasnovski/mini.nvim
     end,
+  },
+  { -- Statusline
+    'nvim-lualine/lualine.nvim',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    opts = {
+      options = {
+        icons_enabled = vim.g.have_nerd_font,
+        theme = 'auto',
+        component_separators = { left = '', right = '' },
+        section_separators = { left = '', right = '' },
+        disabled_filetypes = { 'packer' },
+      },
+      sections = {
+        lualine_a = {
+          {
+            'mode',
+            fmt = function(str)
+              local mode_map = {
+                NORMAL = '',
+                INSERT = '',
+                VISUAL = '',
+                ['V-LINE'] = '',
+                ['V-BLOCK'] = '󰒅',
+                REPLACE = '',
+                COMMAND = '',
+                TERMINAL = '',
+                SELECT = '󰒅',
+                ['S-LINE'] = '󰒅',
+                ['S-BLOCK'] = '󰒅',
+              }
+              return mode_map[str] or str
+            end,
+          },
+        },
+        lualine_b = { 'branch', 'diff', 'diagnostics' },
+        lualine_c = { 'filename' },
+        lualine_x = { 'encoding', 'fileformat', 'filetype' },
+        lualine_y = { 'progress' },
+        lualine_z = { 'location' },
+      },
+      extensions = { 'nvim-tree', 'lazy', 'quickfix' },
+    },
   },
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
@@ -1082,7 +1124,7 @@ require('lazy').setup({
       'VeryLazy',
     },
     cond = function()
-      return vim.fn.filereadable('artisan') == 1
+      return vim.fn.filereadable 'artisan' == 1
     end,
     cmd = { 'Laravel' },
     keys = {
@@ -1160,7 +1202,7 @@ require('lazy').setup({
         '<leader>le',
         function()
           Laravel.commands.run 'env:configure'
-          vim.notify("After selecting, press <leader>lR to reload", vim.log.levels.INFO)
+          vim.notify('After selecting, press <leader>lR to reload', vim.log.levels.INFO)
         end,
         desc = 'Laravel: Change Environment',
       },
@@ -1210,12 +1252,21 @@ require('lazy').setup({
     },
     config = function()
       require('nvim-tree').setup {
+        renderer = {
+          root_folder_label = function()
+            return '󰁝 ..'
+          end,
+        },
         on_attach = function(bufnr)
           local api = require 'nvim-tree.api'
           -- Load default mappings first
           api.config.mappings.default_on_attach(bufnr)
           -- Make space act as leader in nvim-tree (remove default space mapping if it exists)
           pcall(vim.keymap.del, 'n', '<Space>', { buffer = bufnr })
+          -- Remove C-k (folder info) so normal pane navigation works
+          pcall(vim.keymap.del, 'n', '<C-k>', { buffer = bufnr })
+          -- Use 'e' to enter/cd into folder
+          vim.keymap.set('n', 'e', api.tree.change_root_to_node, { buffer = bufnr, desc = 'Enter folder (cd)' })
         end,
       }
       vim.keymap.set('n', '<leader>e', '<cmd>NvimTreeToggle<CR>', { desc = 'Toggle Nvim Tree' })

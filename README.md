@@ -25,7 +25,11 @@ This creates symlinks:
 
 ### Neovim (based on Kickstart.nvim)
 - **Color scheme**: Dracula
+- **Statusline**: lualine.nvim with mode icons (, , , , , )
 - **File explorer**: nvim-tree (toggle with `<Space>e`)
+  - `c` - CD into selected folder
+  - `-` - Go to parent directory
+  - Parent folder shown as `󰁝 ..` instead of full path
 - **Fuzzy finder**: Telescope
   - `<Space>sf` - Search files
   - `<Space>sg` - Live grep
