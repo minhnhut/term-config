@@ -1171,41 +1171,19 @@ require('lazy').setup({
       })
     end,
   },
+  -- Buffer and window keymaps (no plugin needed)
   {
-    'akinsho/bufferline.nvim',
-    version = '*',
-    dependencies = 'nvim-tree/nvim-web-devicons',
+    dir = '.',
+    name = 'buffer-window-keymaps',
     config = function()
-      require('bufferline').setup {
-        options = {
-          offsets = {
-            {
-              filetype = 'NvimTree',
-              text = 'File Explorer',
-              separator = true,
-              text_align = 'left',
-            },
-          },
-          diagnostics = 'nvim_lsp',
-          separator_style = { '', '' },
-          modified_icon = '●',
-          show_close_icon = false,
-          show_buffer_close_icons = false,
-        },
-      }
-      vim.keymap.set('n', '<Tab>', '<cmd>BufferLineCycleNext<CR>', { desc = 'Next buffer' })
-      vim.keymap.set('n', '<S-Tab>', '<cmd>BufferLineCyclePrev<CR>', { desc = 'Previous buffer' })
+      vim.keymap.set('n', '<Tab>', '<cmd>bnext<CR>', { desc = 'Next buffer' })
+      vim.keymap.set('n', '<S-Tab>', '<cmd>bprevious<CR>', { desc = 'Previous buffer' })
       vim.keymap.set('n', '<leader>bb', '<cmd>Telescope buffers<CR>', { desc = 'Search buffers' })
-      vim.keymap.set('n', '<leader>bp', '<cmd>BufferLinePick<CR>', { desc = 'Pick buffer' })
-      vim.keymap.set('n', '<leader>bc', '<cmd>BufferLinePickClose<CR>', { desc = 'Pick buffer to close' })
       vim.keymap.set('n', '<leader>bx', function()
         local buf = vim.api.nvim_get_current_buf()
-        vim.cmd 'BufferLineCyclePrev'
+        vim.cmd 'bprevious'
         vim.api.nvim_buf_delete(buf, {})
       end, { desc = 'Close current buffer' })
-      vim.keymap.set('n', '<leader>bo', '<cmd>BufferLineCloseOthers<CR>', { desc = 'Close other buffers' })
-      vim.keymap.set('n', '<leader>bl', '<cmd>BufferLineCloseLeft<CR>', { desc = 'Close buffers to the left' })
-      vim.keymap.set('n', '<leader>br', '<cmd>BufferLineCloseRight<CR>', { desc = 'Close buffers to the right' })
 
       -- Window management under <leader>w
       vim.keymap.set('n', '<leader>wh', '<C-w>h', { desc = 'Go to left window' })
