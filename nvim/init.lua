@@ -102,7 +102,7 @@ vim.g.have_nerd_font = true
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.o.relativenumber = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -456,6 +456,13 @@ require('lazy').setup({
           file_ignore_patterns = {
             'node_modules/',
             -- 'vendor/',
+          },
+          previewer = false,
+          mappings = {
+            i = {
+              ['<C-j>'] = 'move_selection_next',
+              ['<C-k>'] = 'move_selection_previous',
+            },
           },
         },
         extensions = {
@@ -812,46 +819,46 @@ require('lazy').setup({
     end,
   },
 
-  { -- Autoformat
-    'stevearc/conform.nvim',
-    event = { 'BufWritePre' },
-    cmd = { 'ConformInfo' },
-    keys = {
-      {
-        '<leader>f',
-        function()
-          require('conform').format { async = true, lsp_format = 'fallback' }
-        end,
-        mode = '',
-        desc = '[F]ormat buffer',
-      },
-    },
-    opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        if disable_filetypes[vim.bo[bufnr].filetype] then
-          return nil
-        else
-          return {
-            timeout_ms = 500,
-            lsp_format = 'fallback',
-          }
-        end
-      end,
-      formatters_by_ft = {
-        lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        -- python = { "isort", "black" },
-        --
-        -- You can use 'stop_after_first' to run the first available formatter from the list
-        -- javascript = { "prettierd", "prettier", stop_after_first = true },
-      },
-    },
-  },
+  -- { -- Autoformat
+  --   'stevearc/conform.nvim',
+  --   event = { 'BufWritePre' },
+  --   cmd = { 'ConformInfo' },
+  --   keys = {
+  --     {
+  --       '<leader>f',
+  --       function()
+  --         require('conform').format { async = true, lsp_format = 'fallback' }
+  --       end,
+  --       mode = '',
+  --       desc = '[F]ormat buffer',
+  --     },
+  --   },
+  --   opts = {
+  --     notify_on_error = false,
+  --     format_on_save = function(bufnr)
+  --       -- Disable "format_on_save lsp_fallback" for languages that don't
+  --       -- have a well standardized coding style. You can add additional
+  --       -- languages here or re-enable it for the disabled ones.
+  --       local disable_filetypes = { c = true, cpp = true }
+  --       if disable_filetypes[vim.bo[bufnr].filetype] then
+  --         return nil
+  --       else
+  --         return {
+  --           timeout_ms = 500,
+  --           lsp_format = 'fallback',
+  --         }
+  --       end
+  --     end,
+  --     formatters_by_ft = {
+  --       lua = { 'stylua' },
+  --       -- Conform can also run multiple formatters sequentially
+  --       -- python = { "isort", "black" },
+  --       --
+  --       -- You can use 'stop_after_first' to run the first available formatter from the list
+  --       -- javascript = { "prettierd", "prettier", stop_after_first = true },
+  --     },
+  --   },
+  -- },
 
   { -- Autocompletion
     'hrsh7th/nvim-cmp',
@@ -981,8 +988,6 @@ require('lazy').setup({
       cmp.setup.filetype({ 'sh', 'dotenv', 'NvimTree', 'NvimTreeFilter' }, {
         enabled = false,
       })
-
-
     end,
   },
 
@@ -1094,6 +1099,7 @@ require('lazy').setup({
   -- require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.oil',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
@@ -1107,70 +1113,22 @@ require('lazy').setup({
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
 
-  -- My other plugins
-  -- File explorer
+  -- Bufferline
   {
-    'nvim-tree/nvim-tree.lua',
-    version = '*', -- Recommended
-    lazy = false, -- Set to false if you want it to load immediately on startup
-    dependencies = {
-      'nvim-tree/nvim-web-devicons', -- Optional, but recommended
-    },
-    config = function()
-      require('nvim-tree').setup {
-        renderer = {
-          root_folder_label = function()
-            return '󰁝 ..'
-          end,
+    'akinsho/bufferline.nvim',
+    version = '*',
+    dependencies = { 'nvim-tree/nvim-web-devicons' },
+    opts = {
+      options = {
+        diagnostics = 'nvim_lsp',
+        offsets = {
+          { filetype = 'oil', text = 'File Explorer', highlight = 'Directory', separator = true },
         },
-        on_attach = function(bufnr)
-          local api = require 'nvim-tree.api'
-          -- Load default mappings first
-          api.config.mappings.default_on_attach(bufnr)
-          -- Make space act as leader in nvim-tree (remove default space mapping if it exists)
-          pcall(vim.keymap.del, 'n', '<Space>', { buffer = bufnr })
-          -- Remove C-k (folder info) so normal pane navigation works
-          pcall(vim.keymap.del, 'n', '<C-k>', { buffer = bufnr })
-          -- Use 'e' to enter/cd into folder
-          vim.keymap.set('n', 'e', api.tree.change_root_to_node, { buffer = bufnr, desc = 'Enter folder (cd)' })
-        end,
-      }
-      vim.keymap.set('n', '<leader>e', '<cmd>NvimTreeToggle<CR>', { desc = 'Toggle Nvim Tree' })
-
-      -- Open NvimTree on startup if no file was specified
-      vim.api.nvim_create_autocmd('VimEnter', {
-        callback = function()
-          if vim.fn.argc() == 0 and vim.fn.line2byte '$' == -1 then
-            require('nvim-tree.api').tree.open()
-          end
-        end,
-      })
-
-      -- Helper function to check for modified buffers
-      local function is_modified_buffer_open(buffers)
-        for _, v in ipairs(buffers) do
-          if v.name:match 'NvimTree_' == nil then
-            return true
-          end
-        end
-        return false
-      end
-
-      -- Close nvim-tree if it's the last window
-      vim.api.nvim_create_autocmd('BufEnter', {
-        nested = true,
-        callback = function()
-          if
-            #vim.api.nvim_list_wins() == 1
-            and vim.api.nvim_buf_get_name(0):match 'NvimTree_' ~= nil
-            and not is_modified_buffer_open(vim.fn.getbufinfo { bufmodified = 1 })
-          then
-            vim.cmd 'quit'
-          end
-        end,
-      })
-    end,
+      },
+    },
   },
+
+  -- My other plugins
   -- Buffer and window keymaps (no plugin needed)
   {
     dir = '.',
