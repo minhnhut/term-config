@@ -1155,32 +1155,6 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>w=', '<C-w>=', { desc = 'Equalize window sizes' })
     end,
   },
-  -- Mistral Codestral (AI code completion)
-  {
-    'jrollin/mistral-codestral.nvim',
-    dependencies = {
-      'nvim-lua/plenary.nvim',
-      'hrsh7th/nvim-cmp',
-    },
-    event = 'InsertEnter',
-    config = function()
-      require('mistral-codestral').setup {
-        api_key = "cmd:head -n1 ~/.mistral_codestral_key | tr -d '\\n'",
-        model = 'codestral-latest',
-        enable_cmp_source = false,
-        virtual_text = {
-          enabled = true,
-          idle_delay = 800,
-          key_bindings = {
-            accept = '<C-y>',
-            accept_word = '<C-Right>',
-            accept_line = '<C-Down>',
-            clear = '<C-c>',
-          },
-        },
-      }
-    end,
-  },
   {
     'OXY2DEV/markview.nvim',
     lazy = false,
