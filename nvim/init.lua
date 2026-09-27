@@ -239,15 +239,32 @@ rtp:prepend(lazypath)
 --  To update plugins you can run
 --    :Lazy update
 --
+-- Colorscheme: follow the current Omarchy theme when running on Omarchy,
+-- otherwise fall back to Dracula (macOS, Windows, other Linux).
+-- Omarchy's theme file is a LazyVim spec list: theme plugin(s) plus a
+-- `LazyVim/LazyVim` entry naming the colorscheme, which we pick out here.
+local function colorscheme_specs()
+  local ok, specs = pcall(dofile, vim.fn.expand '~/.local/state/omarchy/current/theme/neovim.lua')
+  if ok and type(specs) == 'table' then
+    local plugins, colorscheme = {}, nil
+    for _, spec in ipairs(specs) do
+      if spec[1] == 'LazyVim/LazyVim' then
+        colorscheme = spec.opts and spec.opts.colorscheme
+      else
+        table.insert(plugins, spec)
+      end
+    end
+    if colorscheme then
+      return plugins, colorscheme
+    end
+  end
+  return { { 'Mofiqul/dracula.nvim', priority = 1000 } }, 'dracula'
+end
+local colorscheme_plugins, colorscheme = colorscheme_specs()
+
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
-  {
-    'Mofiqul/dracula.nvim',
-    priority = 1000, -- Load colorscheme before other plugins
-    config = function()
-      vim.cmd.colorscheme 'dracula'
-    end,
-  },
+  colorscheme_plugins,
   -- Seamless navigation between tmux panes and vim splits
   {
     'christoomey/vim-tmux-navigator',
@@ -1183,6 +1200,11 @@ require('lazy').setup({
     },
   },
 })
+
+-- lazy.nvim loads the colorscheme plugin on demand here
+if not pcall(vim.cmd.colorscheme, colorscheme) then
+  vim.notify('Colorscheme "' .. colorscheme .. '" not found', vim.log.levels.WARN)
+end
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et

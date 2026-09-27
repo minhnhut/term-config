@@ -1,6 +1,6 @@
 # term-config
 
-My terminal configuration for nvim, tmux, zsh, and wezterm. In case anybody is interested.
+My terminal configuration for nvim, tmux, zsh and kitty. In case anybody is interested.
 
 ## Installation
 
@@ -10,21 +10,41 @@ cd term-config
 ./install.sh
 ```
 
-This creates symlinks:
-- `nvim/` -> `~/.config/nvim`
-- `tmux/.tmux.conf` -> `~/.tmux.conf`
-- `zsh/.zshrc` -> `~/.zshrc`
-- `wezterm/.wezterm.lua` -> `~/.wezterm.lua`
+The first run asks which configs to install and saves the answers to
+`~/.config/term-config/choices`. Later runs apply the saved choices without
+asking (handy after a `git pull`). To change your choices:
+
+```bash
+./install.sh --config
+```
+
+Works on macOS, Linux, [Omarchy](https://omarchy.org/) and Windows (Git Bash).
+Only configs that make sense on the platform are offered, and existing configs
+are backed up to `<path>.bak.<timestamp>`. Deselecting a config removes its
+link and restores the latest backup.
+
+| Config | Link |
+|---|---|
+| Neovim | `nvim/` -> `~/.config/nvim` (Windows: `%LOCALAPPDATA%\nvim`) |
+| tmux | `tmux/.tmux.conf` -> `~/.config/tmux/tmux.conf` |
+| zsh | `~/.zshrc` stays per machine and sources `zsh/extras.zsh` |
+| Terminal | Asks which terminal you use: foot or kitty on Linux, kitty or none on macOS. Picking kitty links `kitty/` -> `~/.config/kitty`; foot keeps its own config. On Omarchy it also becomes the default terminal (installed first if needed). |
+
+On Omarchy, everything follows the current Omarchy theme: Neovim (when it
+starts) and kitty load its colours, and tmux backgrounds are transparent so the
+terminal's theme shows through. Everywhere else they use Dracula.
+
+On Windows, symlinks need Developer Mode enabled.
 
 ## What's Inside
 
-### WezTerm
-- **Font**: BlexMono Nerd Font Mono (size 15)
-- **Color scheme**: Dracula
-- **Window**: 120x28 initial size, hides tab bar when only one tab
+### Kitty
+- **Font**: FiraMono Nerd Font Mono (size 14)
+- **Color scheme**: Dracula, or the current Omarchy theme on Omarchy
+- **Keys**: `Shift+Enter` sends a distinct escape sequence (for TUI apps that use it)
 
 ### Neovim (based on Kickstart.nvim)
-- **Color scheme**: Dracula
+- **Color scheme**: follows the Omarchy theme on Omarchy, Dracula elsewhere
 - **Statusline**: lualine.nvim with mode icons (, , , , , )
 - **File explorer**: nvim-tree (toggle with `<Space>e`)
   - `c` - CD into selected folder
@@ -92,8 +112,8 @@ The `.zshrc` will automatically source it if it exists. You may don't need this.
 
 ## Requirements
 
-- [WezTerm](https://wezfurlong.org/wezterm/)
+- [kitty](https://sw.kovidgoyal.net/kitty/)
 - [Oh My Zsh](https://ohmyz.sh/)
 - [Tmux Plugin Manager](https://github.com/tmux-plugins/tpm)
 - [Neovim](https://neovim.io/)
-- [BlexMono Nerd Font](https://www.nerdfonts.com/)
+- [FiraMono Nerd Font](https://www.nerdfonts.com/)
